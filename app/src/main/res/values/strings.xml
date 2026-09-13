@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Notification Collector</string>
+    <string name="listener_name">Message notification collector</string>
+    <string name="privacy_summary">Offline prototype. Captures only enabled messaging apps and automatically deletes records older than 7 days.</string>
+    <string name="open_access_settings">Open notification access settings</string>
+    <string name="capture_messenger">Capture Messenger notifications</string>
+    <string name="capture_whatsapp">Capture WhatsApp notifications</string>
+    <string name="refresh_captures">Refresh captured notifications</string>
+    <string name="delete_all">Delete all captured data</string>
+    <string name="delete_title">Delete captured data?</string>
+    <string name="delete_message">This permanently deletes every locally stored notification record.</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="recent_captures">Recent captures</string>
+    <string name="access_enabled">Notification access: enabled</string>
+    <string name="access_disabled">Notification access: disabled — enable it before testing</string>
+    <string name="resume_capture">Resume capture</string>
+    <string name="pause_capture">Pause capture</string>
+    <string name="no_captures">No matching notifications captured yet.</string>
+</resources>

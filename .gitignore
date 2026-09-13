@@ -1,0 +1,16 @@
+*.iml
+.gradle/
+.gradle-user/
+.gradle-bootstrap/
+.android-user/
+.android-cli-stage/
+.idea/
+local.properties
+build/
+*/build/
+captures/
+*.jks
+*.keystore
+*-bin.zip
+*-bin.zip.sha256
+commandlinetools-win.zip
