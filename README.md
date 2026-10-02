@@ -1,9 +1,70 @@
 # Notification Collector
 
-An Android app that captures selected Messenger and WhatsApp notification
-previews and turns computer-science course chat into structured academic
-events. Milestones 1–7 cover collection, normalization, local relevance
-filtering, bounded context, structured extraction, event memory, and alerts.
+Notification Collector is an Android academic helper for Messenger and WhatsApp
+chats. It saves notification previews on your phone, removes repeated copies,
+and labels messages that look relevant to coursework. With an optional backend,
+it can organize those messages into academic events and alert you to important
+updates.
+
+## What you can do
+
+- **Review chat messages in one place.** The Inbox shows captured messages,
+  their source chat, and an on-device academic relevance label. It works without
+  an internet connection or backend.
+- **Track course information.** Optional analysis can identify tests, exams,
+  deadlines, labs, class changes, shared resources, course questions, and
+  programming problems. It can include dates, locations, and details when the
+  messages provide them.
+- **See the latest information.** The Events screen keeps the current version
+  of an item when later messages confirm or correct it. Activity records when
+  an event was created or materially updated. You can archive an event to hide
+  it from the active Events list.
+- **Choose which chats get analyzed.** Add courses and aliases, assign them to
+  discovered chats, and enable only the chats you want to send to your backend.
+- **Opt in to alerts.** Receive eligible, high-confidence updates for confirmed
+  or corrected events, plus an optional daily summary of confirmed events in
+  the next seven days. The summary is scheduled around 8:00 AM local time.
+
+## Getting started
+
+1. Install and open the Android app, then grant **notification access** during
+   onboarding. The app needs a Messenger or WhatsApp notification preview before
+   it can capture a message; it cannot read older chats.
+2. In **Settings**, choose which apps to collect from. Messenger collection is
+   on by default and WhatsApp collection is off. You can pause collection at
+   any time.
+3. After a message notification arrives, open **Inbox** to see its local label
+   and **Chats** to see the discovered conversation. Add your subjects in
+   **Courses** and assign a subject to a chat if useful.
+4. To create structured **Events**, configure your own HTTPS backend and its
+   device token in **Settings**, save the configuration, then turn on cloud
+   analysis. Enable the desired conversation in **Chats** and tap **Analyze
+   pending messages now**, or wait for automatic analysis. See
+   [backend setup](backend/README.md) for server instructions.
+5. To receive this app's alerts, allow Android notifications and turn on the
+   immediate alerts or daily digest switches in **Settings**.
+
+| Screen | What it shows |
+| --- | --- |
+| **Events** | Current academic items, including dates, details, confidence, and source chat when available. |
+| **Activity** | A history of new events and meaningful changes to them. |
+| **Inbox** | Recent captured messages and their local relevance labels, including messages labeled irrelevant. |
+| **Chats** | Discovered conversations; enable a chat here to allow cloud analysis and assign a course. |
+| **Courses** | Course codes, names, sections, and optional aliases. |
+| **Raw** | Original notification snapshots for troubleshooting capture and parsing. |
+| **Settings** | Collection, retention, backend, alert, and delete-data controls. |
+
+**What the app does not do:** It does not silence, cancel, or remove Messenger
+or WhatsApp notifications. It builds a separate view from the previews Android
+delivers. Enabling a chat in **Chats** controls cloud analysis, not local
+collection. The Inbox may therefore contain ordinary chat messages; the local
+label is a first-pass filter, not a guarantee of importance.
+
+Without a backend, Inbox classification still works, but Events and Activity
+will not receive new structured results. The backend's default `heuristic`
+provider is useful for a basic test; it does not extract dates or reach the
+app's immediate-alert confidence threshold. An AI provider can produce richer
+results, but its interpretations should be checked against the original chat.
 
 ## Current pipeline
 
@@ -19,7 +80,8 @@ Android notification -> normalized/deduplicated message
 
 - Detects CT/exam, deadline, lab, class, resource, course-question, and
   programming-problem language, including selected Bangla/Banglish terms.
-- Groups up to 12 relevant messages from the same conversation for context.
+- Sends up to 12 recent messages from the same enabled conversation as context
+  when a locally relevant message triggers analysis.
 - Lets the user enable individual chats and assign courses/aliases.
 - Extracts schedule/deadline, room, details/syllabus, confirmation state,
   evidence IDs, confidence, urgency, and notification decisions.
