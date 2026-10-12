@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NotificationListener"
+rootProject.name = "ClassChatDigest"
 include(":app")

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Notification Collector</string>
-    <string name="listener_name">Message notification collector</string>
+    <string name="app_name">Class Chat Digest</string>
+    <string name="listener_name">Class Chat Digest</string>
     <string name="open_access_settings">Open notification access settings</string>
     <string name="capture_messenger">Capture Messenger notifications</string>
     <string name="capture_whatsapp">Capture WhatsApp notifications</string>

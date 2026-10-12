@@ -1,6 +1,6 @@
-# Notification Collector
+# Class Chat Digest
 
-Notification Collector is an Android academic helper for Messenger and WhatsApp
+Class Chat Digest is an Android academic helper for Messenger and WhatsApp
 chats. It saves notification previews on your phone, removes repeated copies,
 and labels messages that look relevant to coursework. With an optional backend,
 it can organize those messages into academic events and alert you to important
@@ -36,7 +36,7 @@ want it, you run your own copy with your own AI API key (see
 ## Install
 
 1. Download the latest `app-debug.apk` from
-   [GitHub Releases](https://github.com/akif67y/NotificationListener/releases).
+   [GitHub Releases](https://github.com/akif67y/class-chat-digest/releases).
    The app supports Android 8 (API 26) or newer.
 2. Open the APK on your phone. If Android asks, allow your browser or file
    manager to **install unknown apps**.
@@ -45,7 +45,7 @@ want it, you run your own copy with your own AI API key (see
 
 > **Notification access is greyed out?** On Android 13 and newer, apps installed
 > from an APK file are blocked from sensitive permissions by default. Open
-> **Settings → Apps → Notification Collector**, tap the **⋮** menu, choose
+> **Settings → Apps → Class Chat Digest**, tap the **⋮** menu, choose
 > **Allow restricted settings**, then grant notification access again.
 
 ## Getting started
