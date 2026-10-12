@@ -15,9 +15,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CourseEntity::class,
         AcademicSignalEntity::class,
         AcademicEventEntity::class,
-        EventRevisionEntity::class
+        EventRevisionEntity::class,
+        ConversationCourseEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,6 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
                 .addMigrations(MIGRATION_1_2)
                 .addMigrations(MIGRATION_2_3)
                 .addMigrations(MIGRATION_3_4)
+                .addMigrations(MIGRATION_4_5)
                 .build()
                 .also { instance = it }
         }
@@ -220,6 +222,33 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_event_revisions_event_key` ON `event_revisions` (`event_key`)")
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_event_revisions_signal_id` ON `event_revisions` (`signal_id`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_event_revisions_created_at` ON `event_revisions` (`created_at`)")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // A chat can now cover several courses. Existing single assignments are
+                // copied into the link table; the legacy column is cleared but kept.
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `conversation_courses` (
+                        `conversation_id` INTEGER NOT NULL,
+                        `course_id` INTEGER NOT NULL,
+                        PRIMARY KEY(`conversation_id`, `course_id`),
+                        FOREIGN KEY(`conversation_id`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`course_id`) REFERENCES `courses`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_conversation_courses_course_id` ON `conversation_courses` (`course_id`)")
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO `conversation_courses` (`conversation_id`, `course_id`)
+                    SELECT `id`, `default_course_id` FROM `conversations`
+                    WHERE `default_course_id` IN (SELECT `id` FROM `courses`)
+                    """.trimIndent()
+                )
+                db.execSQL("UPDATE `conversations` SET `default_course_id` = NULL")
             }
         }
     }

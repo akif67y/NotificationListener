@@ -30,6 +30,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val messages = dao.observeRecentMessages()
     val conversations = dao.observeConversations()
+    val conversationCourses = dao.observeConversationCourses()
     val courses = dao.observeCourses()
     val snapshots = dao.observeSnapshots()
     val signals = dao.observeSignals()
@@ -99,8 +100,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { repository.setConversationEnabled(id, enabled) }
     }
 
-    fun setConversationCourse(id: Long, courseId: Long?) {
-        viewModelScope.launch { repository.setConversationCourse(id, courseId) }
+    fun setConversationCourses(id: Long, courseIds: Set<Long>) {
+        viewModelScope.launch { repository.setConversationCourses(id, courseIds) }
     }
 
     fun saveCloudConfiguration(url: String, token: String) {
@@ -210,7 +211,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteCourse(id: Long) {
-        viewModelScope.launch { dao.deleteCourse(id) }
+        viewModelScope.launch { repository.deleteCourse(id) }
     }
 
     fun deleteCapturedData() {

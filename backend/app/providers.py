@@ -12,6 +12,7 @@ from .schemas import (
     AnalysisPayload,
     AnalyzeRequest,
     Category,
+    CourseInput,
     EventAction,
     EventStatus,
     SignalDraft,
@@ -33,6 +34,11 @@ material changed. For a genuinely new event return CREATE with event_key null; t
 the key. Questions/speculation must not trigger an interrupting notification. Use HIGH urgency and
 should_notify only for sufficiently confident, confirmed imminent schedules, deadlines,
 cancellations, or material corrections. details holds syllabus, problem, resource, or instructions.
+conversation.courses lists every course discussed in this chat, with titles and aliases. One chat
+may cover several courses: choose course_code separately for each signal from that list, using the
+code, title, or alias its evidence mentions, or the course of the known event it updates. If the
+chat has exactly one course, use it unless the evidence names another. If the evidence does not
+identify one listed course, set course_code to null; never guess between courses.
 """.strip()
 
 GEMINI_SCHEMA_KEYS = {
@@ -102,6 +108,27 @@ def validated_gemini_payload(raw_json: str) -> AnalysisPayload:
     return AnalysisPayload.model_validate(payload)
 
 
+def mentions(text: str, term: str) -> bool:
+    """Match a course code/title/alias as whole words, allowing "CSE221" or "cse-221"."""
+    words = re.findall(r"\w+", term)
+    if not words:
+        return False
+    pattern = r"(?<!\w)" + r"[\s\-]*".join(re.escape(word) for word in words) + r"(?!\w)"
+    return re.search(pattern, text, re.IGNORECASE) is not None
+
+
+def course_for(text: str, courses: list[CourseInput]) -> str | None:
+    matched = [
+        course.code for course in courses
+        if any(mentions(text, term) for term in (course.code, course.title, *course.aliases))
+    ]
+    if len(matched) == 1:
+        return matched[0]
+    if not matched and len(courses) == 1:
+        return courses[0].code
+    return None
+
+
 class AnalysisProvider(Protocol):
     def analyze(self, request: AnalyzeRequest) -> AnalysisPayload: ...
 
@@ -119,10 +146,14 @@ class HeuristicProvider:
             (Category.CLASS_INFORMATION, r"\b(class|room|cancelled|rescheduled)\b", Urgency.MEDIUM),
         ]
         for message in request.messages:
+            course_code = course_for(message.text, request.conversation.courses)
             for category, pattern, urgency in patterns:
                 if re.search(pattern, message.text, re.IGNORECASE):
                     existing = next(
-                        (event for event in request.known_events if event.category == category),
+                        (
+                            event for event in request.known_events
+                            if event.category == category and event.course_code == course_code
+                        ),
                         None,
                     )
                     is_question = "?" in message.text
@@ -147,7 +178,7 @@ class HeuristicProvider:
                         event_key=existing.event_key if existing else None,
                         action=action,
                         category=category,
-                        course_code=request.conversation.course_code,
+                        course_code=course_code,
                         title=category.value.replace("_", " ").title(),
                         summary=message.text[:1000],
                         starts_at=None,

@@ -59,8 +59,34 @@ data class ConversationEntity(
     @ColumnInfo(name = "external_key") val externalKey: String,
     @ColumnInfo(name = "display_name") val displayName: String,
     val enabled: Boolean = false,
+    // Legacy single-course assignment (schema v2-v4). Migration 4→5 moves it into
+    // conversation_courses and clears it; the column is kept to avoid rebuilding a parent table.
     @ColumnInfo(name = "default_course_id") val defaultCourseId: Long? = null,
     @ColumnInfo(name = "last_seen") val lastSeen: Long
+)
+
+@Entity(
+    tableName = "conversation_courses",
+    primaryKeys = ["conversation_id", "course_id"],
+    foreignKeys = [
+        ForeignKey(
+            entity = ConversationEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["conversation_id"],
+            onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = CourseEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["course_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["course_id"])]
+)
+data class ConversationCourseEntity(
+    @ColumnInfo(name = "conversation_id") val conversationId: Long,
+    @ColumnInfo(name = "course_id") val courseId: Long
 )
 
 @Entity(
@@ -216,13 +242,12 @@ data class RevisionListItem(
     val courseCode: String?
 )
 
-data class ConversationWithCourse(
+data class ConversationWithCourses(
     val id: Long,
     val platform: String,
     val displayName: String,
     val enabled: Boolean,
-    val defaultCourseId: Long?,
-    val courseCode: String?,
+    val courseCodes: String?,
     val lastSeen: Long,
     val messageCount: Int
 )
@@ -235,7 +260,7 @@ data class MessageListItem(
     val messageTimestamp: Long,
     val conversationName: String,
     val analysisEnabled: Boolean,
-    val courseCode: String?,
+    val courseCodes: String?,
     val localCategory: String,
     val relevanceScore: Double,
     val analysisState: String
@@ -246,7 +271,6 @@ data class PendingMessage(
     val conversationId: Long,
     val platform: String,
     val conversationName: String,
-    val courseCode: String?,
     val sender: String,
     val text: String,
     val messageTimestamp: Long,

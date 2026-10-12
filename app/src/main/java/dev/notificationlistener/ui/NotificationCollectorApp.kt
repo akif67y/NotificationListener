@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +55,7 @@ import dev.notificationlistener.R
 import dev.notificationlistener.data.CaptureSettings
 import dev.notificationlistener.data.EventWithConversation
 import dev.notificationlistener.data.RevisionListItem
-import dev.notificationlistener.data.ConversationWithCourse
+import dev.notificationlistener.data.ConversationWithCourses
 import dev.notificationlistener.data.CourseEntity
 import dev.notificationlistener.data.MessageListItem
 import dev.notificationlistener.data.NotificationSnapshotEntity
@@ -317,7 +318,7 @@ private fun MessageCard(message: MessageListItem) {
                     ),
                     style = MaterialTheme.typography.labelSmall
                 )
-                message.courseCode?.let { Text(" · $it", style = MaterialTheme.typography.labelSmall) }
+                message.courseCodes?.let { Text(" · $it", style = MaterialTheme.typography.labelSmall) }
             }
             Text(
                 stringResource(
@@ -336,19 +337,22 @@ private fun MessageCard(message: MessageListItem) {
 private fun ConversationsScreen(viewModel: MainViewModel) {
     val conversations by viewModel.conversations.collectAsState(initial = emptyList())
     val courses by viewModel.courses.collectAsState(initial = emptyList())
+    val links by viewModel.conversationCourses.collectAsState(initial = emptyList())
+    val assigned = links.groupBy({ it.conversationId }, { it.courseId })
     ScreenListHeader(R.string.conversations_title, R.string.conversations_body)
     if (conversations.isEmpty()) EmptyState(R.string.no_conversations)
     else LazyColumn(Modifier.fillMaxSize()) {
-        items(conversations, key = ConversationWithCourse::id) { conversation ->
-            ConversationCard(conversation, courses, viewModel)
+        items(conversations, key = ConversationWithCourses::id) { conversation ->
+            ConversationCard(conversation, courses, assigned[conversation.id].orEmpty().toSet(), viewModel)
         }
     }
 }
 
 @Composable
 private fun ConversationCard(
-    conversation: ConversationWithCourse,
+    conversation: ConversationWithCourses,
     courses: List<CourseEntity>,
+    assignedCourseIds: Set<Long>,
     viewModel: MainViewModel
 ) {
     var showCourseDialog by remember { mutableStateOf(false) }
@@ -379,7 +383,7 @@ private fun ConversationCard(
                 Text(
                     stringResource(
                         R.string.course_assignment,
-                        conversation.courseCode ?: stringResource(R.string.no_course)
+                        conversation.courseCodes ?: stringResource(R.string.no_course)
                     )
                 )
             }
@@ -388,10 +392,10 @@ private fun ConversationCard(
     if (showCourseDialog) {
         CourseAssignmentDialog(
             courses = courses,
-            selectedId = conversation.defaultCourseId,
+            initialSelection = assignedCourseIds,
             dismiss = { showCourseDialog = false },
-            select = {
-                viewModel.setConversationCourse(conversation.id, it)
+            save = {
+                viewModel.setConversationCourses(conversation.id, it)
                 showCourseDialog = false
             }
         )
@@ -401,25 +405,38 @@ private fun ConversationCard(
 @Composable
 private fun CourseAssignmentDialog(
     courses: List<CourseEntity>,
-    selectedId: Long?,
+    initialSelection: Set<Long>,
     dismiss: () -> Unit,
-    select: (Long?) -> Unit
+    save: (Set<Long>) -> Unit
 ) {
+    var selected by remember { mutableStateOf(initialSelection) }
     AlertDialog(
         onDismissRequest = dismiss,
         title = { Text(stringResource(R.string.assign_course)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                ChoiceRow(stringResource(R.string.no_course), selectedId == null) { select(null) }
+                Text(
+                    stringResource(if (courses.isEmpty()) R.string.no_courses else R.string.assign_course_body),
+                    style = MaterialTheme.typography.bodySmall
+                )
                 courses.forEach { course ->
-                    ChoiceRow("${course.code} — ${course.title}", selectedId == course.id) {
-                        select(course.id)
+                    CheckboxRow("${course.code} — ${course.title}", course.id in selected) { checked ->
+                        selected = if (checked) selected + course.id else selected - course.id
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = dismiss) { Text(stringResource(R.string.cancel)) } }
+        confirmButton = { Button(onClick = { save(selected) }) { Text(stringResource(R.string.save)) } },
+        dismissButton = { TextButton(onClick = dismiss) { Text(stringResource(R.string.cancel)) } }
     )
+}
+
+@Composable
+private fun CheckboxRow(label: String, checked: Boolean, toggle: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = toggle)
+        Text(label)
+    }
 }
 
 @Composable

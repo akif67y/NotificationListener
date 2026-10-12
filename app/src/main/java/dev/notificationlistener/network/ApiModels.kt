@@ -14,7 +14,13 @@ data class ConversationInput(
     val id: Long,
     val platform: String,
     val name: String,
-    @SerializedName("course_code") val courseCode: String?
+    val courses: List<CourseInput>
+)
+
+data class CourseInput(
+    val code: String,
+    val title: String,
+    val aliases: List<String>
 )
 
 data class MessageInput(

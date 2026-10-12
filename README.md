@@ -19,8 +19,10 @@ updates.
   of an item when later messages confirm or correct it. Activity records when
   an event was created or materially updated. You can archive an event to hide
   it from the active Events list.
-- **Choose which chats get analyzed.** Add courses and aliases, assign them to
-  discovered chats, and enable only the chats you want to send to your backend.
+- **Choose which chats get analyzed.** Add courses and aliases, assign one or
+  more of them to each discovered chat, and enable only the chats you want to
+  send to your backend. In a chat that covers several courses, each event is
+  matched to the course its messages mention.
 - **Opt in to alerts.** Receive eligible, high-confidence updates for confirmed
   or corrected events, plus an optional daily summary of confirmed events in
   the next seven days. The summary is scheduled around 8:00 AM local time.
@@ -35,7 +37,8 @@ updates.
    any time.
 3. After a message notification arrives, open **Inbox** to see its local label
    and **Chats** to see the discovered conversation. Add your subjects in
-   **Courses** and assign a subject to a chat if useful.
+   **Courses** and assign every subject a chat discusses. Assigned courses
+   make messages that mention them more likely to be analyzed.
 4. To create structured **Events**, configure your own HTTPS backend and its
    device token in **Settings**, save the configuration, then turn on cloud
    analysis. Enable the desired conversation in **Chats** and tap **Analyze
@@ -49,7 +52,7 @@ updates.
 | **Events** | Current academic items, including dates, details, confidence, and source chat when available. |
 | **Activity** | A history of new events and meaningful changes to them. |
 | **Inbox** | Recent captured messages and their local relevance labels, including messages labeled irrelevant. |
-| **Chats** | Discovered conversations; enable a chat here to allow cloud analysis and assign a course. |
+| **Chats** | Discovered conversations; enable a chat here to allow cloud analysis and assign its courses. |
 | **Courses** | Course codes, names, sections, and optional aliases. |
 | **Raw** | Original notification snapshots for troubleshooting capture and parsing. |
 | **Settings** | Collection, retention, backend, alert, and delete-data controls. |
@@ -82,7 +85,9 @@ Android notification -> normalized/deduplicated message
   programming-problem language, including selected Bangla/Banglish terms.
 - Sends up to 12 recent messages from the same enabled conversation as context
   when a locally relevant message triggers analysis.
-- Lets the user enable individual chats and assign courses/aliases.
+- Lets the user enable individual chats and assign several courses/aliases to
+  each; the backend attributes every event to one of the chat's courses, or none
+  when the messages do not say which.
 - Extracts schedule/deadline, room, details/syllabus, confirmation state,
   evidence IDs, confidence, urgency, and notification decisions.
 - Maintains stable events using CREATE, UPDATE, and NO_CHANGE decisions;
@@ -91,7 +96,7 @@ Android notification -> normalized/deduplicated message
 - Supports opt-in high-confidence alerts and an 8:00 AM local seven-day digest.
 - Uses WorkManager for network-constrained immediate and periodic analysis,
   with visible completion, no-pending-message, authentication, and retry status.
-- Preserves the original prototype data through Room migrations 1→2→3→4.
+- Preserves the original prototype data through Room migrations 1→2→3→4→5.
 
 ## Privacy and security
 

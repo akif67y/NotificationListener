@@ -52,9 +52,10 @@
         <item quantity="one">%1$d message</item>
         <item quantity="other">%1$d messages</item>
     </plurals>
-    <string name="course_assignment">Course: %1$s</string>
+    <string name="course_assignment">Courses: %1$s</string>
     <string name="no_course">No course</string>
-    <string name="assign_course">Assign course</string>
+    <string name="assign_course">Assign courses</string>
+    <string name="assign_course_body">Select every course discussed in this chat. Each event is matched to the course its messages mention.</string>
     <string name="courses_title">Your courses</string>
     <string name="courses_body">Course codes and aliases will help associate messages with the right subject.</string>
     <string name="add_course">Add course</string>

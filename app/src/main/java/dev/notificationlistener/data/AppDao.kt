@@ -21,8 +21,15 @@ interface AppDao {
     @Query("UPDATE conversations SET display_name = :displayName, last_seen = :lastSeen WHERE id = :id")
     suspend fun touchConversation(id: Long, displayName: String, lastSeen: Long)
 
-    @Query("SELECT courses.code || ',' || courses.title || ',' || courses.aliases FROM conversations JOIN courses ON courses.id = conversations.default_course_id WHERE conversations.id = :conversationId")
-    suspend fun courseHints(conversationId: Long): String?
+    @Query(
+        """
+        SELECT courses.* FROM courses
+        JOIN conversation_courses cc ON cc.course_id = courses.id
+        WHERE cc.conversation_id = :conversationId
+        ORDER BY courses.code COLLATE NOCASE
+        """
+    )
+    suspend fun coursesForConversation(conversationId: Long): List<CourseEntity>
 
     @Query("SELECT MAX(message_timestamp) FROM messages WHERE conversation_id = :conversationId AND relevance_score >= :threshold")
     suspend fun latestRelevantTimestamp(conversationId: Long, threshold: Double): Long?
@@ -33,16 +40,19 @@ interface AppDao {
     @Query(
         """
         SELECT c.id, c.platform, c.display_name AS displayName, c.enabled,
-               c.default_course_id AS defaultCourseId, courses.code AS courseCode,
-               c.last_seen AS lastSeen, COUNT(m.id) AS messageCount
+               (SELECT GROUP_CONCAT(courses.code, ', ')
+                FROM conversation_courses cc JOIN courses ON courses.id = cc.course_id
+                WHERE cc.conversation_id = c.id) AS courseCodes,
+               c.last_seen AS lastSeen,
+               (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) AS messageCount
         FROM conversations c
-        LEFT JOIN courses ON courses.id = c.default_course_id
-        LEFT JOIN messages m ON m.conversation_id = c.id
-        GROUP BY c.id
         ORDER BY c.last_seen DESC
         """
     )
-    fun observeConversations(): Flow<List<ConversationWithCourse>>
+    fun observeConversations(): Flow<List<ConversationWithCourses>>
+
+    @Query("SELECT * FROM conversation_courses")
+    fun observeConversationCourses(): Flow<List<ConversationCourseEntity>>
 
     @Query("UPDATE conversations SET enabled = :enabled WHERE id = :conversationId")
     suspend fun setConversationEnabled(conversationId: Long, enabled: Boolean)
@@ -50,8 +60,11 @@ interface AppDao {
     @Query("UPDATE messages SET analysis_state = 'PENDING' WHERE conversation_id = :conversationId AND relevance_score >= :threshold AND analysis_state = 'LOCAL_ONLY'")
     suspend fun queueRelevantMessages(conversationId: Long, threshold: Double)
 
-    @Query("UPDATE conversations SET default_course_id = :courseId WHERE id = :conversationId")
-    suspend fun setConversationCourse(conversationId: Long, courseId: Long?)
+    @Query("DELETE FROM conversation_courses WHERE conversation_id = :conversationId")
+    suspend fun clearConversationCourses(conversationId: Long)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertConversationCourses(links: List<ConversationCourseEntity>)
 
     @Query("SELECT * FROM messages WHERE conversation_id = :conversationId")
     suspend fun messagesForConversation(conversationId: Long): List<MessageEntity>
@@ -68,19 +81,23 @@ interface AppDao {
     @Query("DELETE FROM courses WHERE id = :courseId")
     suspend fun deleteCourse(courseId: Long)
 
+    @Query("DELETE FROM conversation_courses WHERE course_id = :courseId")
+    suspend fun deleteCourseLinks(courseId: Long)
+
     @Query(
         """
         SELECT m.id, m.platform, m.sender, m.text,
                m.message_timestamp AS messageTimestamp,
                c.display_name AS conversationName,
                c.enabled AS analysisEnabled,
-               courses.code AS courseCode,
+               (SELECT GROUP_CONCAT(courses.code, ', ')
+                FROM conversation_courses cc JOIN courses ON courses.id = cc.course_id
+                WHERE cc.conversation_id = c.id) AS courseCodes,
                m.local_category AS localCategory,
                m.relevance_score AS relevanceScore,
                m.analysis_state AS analysisState
         FROM messages m
         JOIN conversations c ON c.id = m.conversation_id
-        LEFT JOIN courses ON courses.id = c.default_course_id
         ORDER BY m.message_timestamp DESC, m.id DESC
         LIMIT :limit
         """
@@ -156,12 +173,11 @@ interface AppDao {
     @Query(
         """
         SELECT m.id, m.conversation_id AS conversationId, m.platform,
-               c.display_name AS conversationName, courses.code AS courseCode,
+               c.display_name AS conversationName,
                m.sender, m.text, m.message_timestamp AS messageTimestamp,
                m.local_category AS localCategory
         FROM messages m
         JOIN conversations c ON c.id = m.conversation_id
-        LEFT JOIN courses ON courses.id = c.default_course_id
         WHERE c.enabled = 1 AND m.analysis_state IN ('PENDING', 'RETRY')
         ORDER BY m.message_timestamp ASC
         LIMIT :limit
@@ -172,12 +188,11 @@ interface AppDao {
     @Query(
         """
         SELECT m.id, m.conversation_id AS conversationId, m.platform,
-               c.display_name AS conversationName, courses.code AS courseCode,
+               c.display_name AS conversationName,
                m.sender, m.text, m.message_timestamp AS messageTimestamp,
                m.local_category AS localCategory
         FROM messages m
         JOIN conversations c ON c.id = m.conversation_id
-        LEFT JOIN courses ON courses.id = c.default_course_id
         WHERE m.conversation_id = :conversationId AND m.message_timestamp <= :throughTimestamp
         ORDER BY m.message_timestamp DESC, m.id DESC
         LIMIT :limit
@@ -206,6 +221,9 @@ interface AppDao {
 
     @Query("DELETE FROM conversations")
     suspend fun deleteAllConversations()
+
+    @Query("DELETE FROM conversation_courses")
+    suspend fun deleteAllConversationCourses()
 
     @Query("DELETE FROM academic_signals")
     suspend fun deleteAllSignals()

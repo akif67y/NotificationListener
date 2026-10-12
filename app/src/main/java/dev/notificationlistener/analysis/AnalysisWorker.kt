@@ -13,6 +13,7 @@ import dev.notificationlistener.alerts.EventNotifier
 import dev.notificationlistener.network.AnalysisApi
 import dev.notificationlistener.network.AnalyzeRequest
 import dev.notificationlistener.network.ConversationInput
+import dev.notificationlistener.network.CourseInput
 import dev.notificationlistener.network.MessageInput
 import dev.notificationlistener.network.KnownEventInput
 import retrofit2.HttpException
@@ -59,6 +60,7 @@ class AnalysisWorker(context: Context, parameters: WorkerParameters) :
                 ).sortedBy { it.messageTimestamp }
                 val first = contextMessages.firstOrNull() ?: window.messages.first()
                 val knownEvents = database.dao().knownEvents(window.conversationId)
+                val courses = database.dao().coursesForConversation(window.conversationId)
                 val request = AnalyzeRequest(
                     requestId = UUID.randomUUID().toString(),
                     timezone = TimeZone.getDefault().id,
@@ -66,7 +68,13 @@ class AnalysisWorker(context: Context, parameters: WorkerParameters) :
                         id = window.conversationId,
                         platform = first.platform,
                         name = first.conversationName,
-                        courseCode = first.courseCode
+                        courses = courses.map { course ->
+                            CourseInput(
+                                code = course.code,
+                                title = course.title,
+                                aliases = course.aliases.split(',').map(String::trim).filter(String::isNotBlank)
+                            )
+                        }
                     ),
                     messages = contextMessages.map {
                         MessageInput(it.id, it.sender, it.text, it.messageTimestamp, it.localCategory)

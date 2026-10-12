@@ -20,7 +20,6 @@ class ContextWindowBuilderTest {
         conversationId = conversationId,
         platform = "Messenger",
         conversationName = "CSE",
-        courseCode = "CSE 221",
         sender = "Student",
         text = "message $id",
         messageTimestamp = timestamp,

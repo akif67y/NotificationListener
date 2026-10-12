@@ -24,7 +24,7 @@ class CaptureRepository(private val database: AppDatabase) {
             requireNotNull(dao.findConversationId(extracted.platform, extracted.conversationKey))
         }
         dao.touchConversation(conversationId, extracted.conversationName, extracted.snapshot.postedAt)
-        val courseHints = dao.courseHints(conversationId)?.split(',').orEmpty()
+        val courseHints = dao.coursesForConversation(conversationId).hints()
         var latestRelevant = dao.latestRelevantTimestamp(
             conversationId,
             LocalAcademicClassifier.UPLOAD_THRESHOLD
@@ -72,11 +72,16 @@ class CaptureRepository(private val database: AppDatabase) {
         if (enabled) dao.queueRelevantMessages(id, LocalAcademicClassifier.UPLOAD_THRESHOLD)
     }
 
-    suspend fun setConversationCourse(id: Long, courseId: Long?) = database.withTransaction {
-        dao.setConversationCourse(id, courseId)
-        val hints = dao.courseHints(id)?.split(',').orEmpty()
+    suspend fun setConversationCourses(id: Long, courseIds: Set<Long>) = database.withTransaction {
+        dao.clearConversationCourses(id)
+        dao.insertConversationCourses(courseIds.map { ConversationCourseEntity(id, it) })
+        val hints = dao.coursesForConversation(id).hints()
         dao.messagesForConversation(id).forEach { message ->
             val result = LocalAcademicClassifier.classify(message.text, hints)
+            // Keep follow-up messages that ingest attached to a nearby relevant message.
+            if (message.localCategory == "CONTEXT" && result.score < LocalAcademicClassifier.UPLOAD_THRESHOLD) {
+                return@forEach
+            }
             dao.updateLocalAnalysis(
                 message.id,
                 result.category,
@@ -114,8 +119,17 @@ class CaptureRepository(private val database: AppDatabase) {
         dao.deleteAllSignals()
         dao.deleteAllMessages()
         dao.deleteAllSnapshots()
+        dao.deleteAllConversationCourses()
         dao.deleteAllConversations()
     }
+
+    suspend fun deleteCourse(courseId: Long) = database.withTransaction {
+        dao.deleteCourseLinks(courseId)
+        dao.deleteCourse(courseId)
+    }
+
+    private fun List<CourseEntity>.hints(): List<String> =
+        flatMap { listOf(it.code, it.title) + it.aliases.split(',') }
 
     private companion object {
         const val DAY_MILLIS = 24L * 60L * 60L * 1000L

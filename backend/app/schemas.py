@@ -1,8 +1,9 @@
 from datetime import datetime
 from enum import StrEnum
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class StrictModel(BaseModel):
@@ -52,11 +53,25 @@ class MessageInput(StrictModel):
     local_category: str = Field(max_length=80)
 
 
+class CourseInput(StrictModel):
+    code: str = Field(min_length=1, max_length=80)
+    title: str = Field(default="", max_length=200)
+    aliases: list[Annotated[str, Field(max_length=80)]] = Field(default_factory=list, max_length=20)
+
+
 class ConversationInput(StrictModel):
     id: int = Field(gt=0)
     platform: str = Field(min_length=1, max_length=80)
     name: str = Field(min_length=1, max_length=300)
+    # Single-course field sent by app builds before multi-course chats; folded into courses.
     course_code: str | None = Field(default=None, max_length=80)
+    courses: list[CourseInput] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def include_legacy_course(self) -> "ConversationInput":
+        if self.course_code and not self.courses:
+            self.courses = [CourseInput(code=self.course_code)]
+        return self
 
 
 class KnownEventInput(StrictModel):

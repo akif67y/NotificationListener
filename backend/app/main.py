@@ -20,11 +20,19 @@ def analyze(request: AnalyzeRequest, settings: Settings = Depends(get_settings))
     payload = provider_for(settings).analyze(request)
     allowed_ids = {message.id for message in request.messages}
     known_keys = {event.event_key for event in request.known_events}
+    # Course codes the chat is assigned to (plus those of known events), keyed case-insensitively.
+    allowed_courses = {
+        code.casefold(): code
+        for code in [course.code for course in request.conversation.courses]
+        + [event.course_code for event in request.known_events if event.course_code]
+    }
     output: list[SignalOutput] = []
     for draft in payload.signals:
         evidence = [message_id for message_id in draft.evidence_message_ids if message_id in allowed_ids]
         if not evidence:
             continue
+        if draft.course_code and allowed_courses:
+            draft.course_code = allowed_courses.get(draft.course_code.casefold())
         if draft.action.value in {"UPDATE", "NO_CHANGE"}:
             if draft.event_key not in known_keys:
                 continue
